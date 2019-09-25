@@ -110,8 +110,8 @@ class ApiWrapper(object):
         else:
             qp = ''
         endpoint = endpoint.value
-        if 'query' in kwargs.keys():
-            query = kwargs.get('query')
+        if 'raw_query' in kwargs.keys():
+            query = kwargs.get('raw_query')
         else:
             query = self.build_query(prototype, endpoint, qp)
         if self.access_token == {}:
