@@ -69,8 +69,9 @@ class ApiWrapper(object):
             raise InvalidTokenException
 
     # Leaving this with just this prototype for now, will try to add field selection later, need to read api docs
+    # Will use kwargs for prototype differentiation within the query scope
     @staticmethod
-    def build_query(endpoint, qp, **kwargs):
+    def build_query(endpoint, qp):
         if endpoint == "games":
             return '{"$query":{"week.season":' + qp[0] + ',"week.seasonType":' + "\"" + qp[1] + "\"" + ',"week.week":' \
                    + qp[2] + '}}&fs={week{season,seasonType,week},id,gameTime,gameStatus,homeTeam{id,abbr},' \
