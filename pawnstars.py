@@ -3,6 +3,7 @@ import requests
 from enum import Enum
 
 
+# Only have all query prototypes finished for games endpoint
 class Endpoints(Enum):
     GAMES = "games"
     TEAMS = "teams"
@@ -68,14 +69,31 @@ class ApiWrapper(object):
         else:
             raise InvalidTokenException
 
-    # Leaving this with just this prototype for now, will try to add field selection later, need to read api docs
-    # Will use kwargs for prototype differentiation within the query scope
+    # Using positional arg for prototype differentiation
+    # Still very basic, no field selection or logical operator selection
+    # Couldn't get this to work using {}.format() method due to curly braces, may be refactored later
     @staticmethod
-    def build_query(endpoint, qp):
+    def build_query(prototype, endpoint, qp):
         if endpoint == "games":
-            return '{"$query":{"week.season":' + qp[0] + ',"week.seasonType":' + "\"" + qp[1] + "\"" + ',"week.week":' \
-                   + qp[2] + '}}&fs={week{season,seasonType,week},id,gameTime,gameStatus,homeTeam{id,abbr},' \
-                             'visitorTeam{id,abbr},homeTeamScore,visitorTeamScore}'
+            if prototype == "week":
+                return '{"$query":{"week.season":' + qp[0] + ',"week.seasonType":' + "\"" + qp[1] + "\"" + ',"week.week":' \
+                    + qp[2] + '}}&fs={week{season,seasonType,week},id,gameTime,gameStatus,homeTeam{id,abbr},' \
+                    'visitorTeam{id,abbr},homeTeamScore,visitorTeamScore}'
+            elif prototype == "week_type":
+                return '{"$query":{"week.weekType":' + "\"" + qp[0] + "\"" + \
+                    '},"$take":10,"$skip":0}&fs={week{season,seasonType,week},id,gameTime,gameStatus,homeTeam' \
+                    '{id,abbr},visitorTeam{id,abbr},homeTeamScore,visitorTeamScore}'
+            elif prototype == "team":
+                return '{"$query":{"week.season":' + qp[0] + ',"$or":[{"homeTeam.abbr":' + "\"" + qp[1] + "\"" + \
+                    '},{"visitorTeam.abbr":' + "\"" + qp[2] + "\"" + \
+                    '}]}}&fs={week{season,seasonType,week},homeTeam{id,abbr},visitorTeam' \
+                    '{id,abbr},homeTeamScore,visitorTeamScore,gameStatus,homeTeamScore,visitorTeamScore}'
+            elif prototype == "historical":
+                return '{"$query":{"$or":[{"visitorTeam.abbr":' + "\"" + qp[0] + "\"" + \
+                    ',"homeTeam.abbr":' + "\"" + qp[1] + "\"" + '},{"homeTeam.abbr":' + "\"" + qp[2] + "\"" + \
+                    ',"visitorTeam.abbr":' + "\"" + qp[3] + "\"" + '}]},"$sort":{"gameTime":1},"$take":10}&fs=' \
+                    '{id,type,week{season,seasonType,name,week},id,gameTime,gameStatus,homeTeam{id,type,abbr}' \
+                    ',visitorTeam{id,type,abbr},homeTeamScore,visitorTeamScore}'
 
     def api_request(self, endpoint, **kwargs):
         if endpoint not in Endpoints:
@@ -83,6 +101,10 @@ class ApiWrapper(object):
         if endpoint == Endpoints.SCORE_FEED:
             req = requests.get('https://feeds.nfl.com/feeds-rs/scores.json')
             return json.loads(req.text)
+        if 'prototype' in kwargs.keys():
+            prototype = kwargs.get("prototype")
+        else:
+            prototype = ''
         if 'qp' in kwargs.keys():
             qp = kwargs.get('qp')
         else:
@@ -91,7 +113,7 @@ class ApiWrapper(object):
         if 'query' in kwargs.keys():
             query = kwargs.get('query')
         else:
-            query = self.build_query(endpoint, qp)
+            query = self.build_query(prototype, endpoint, qp)
         if self.access_token == {}:
             self.request_new_token()
             print("\nFetched new token {}\n".format(self.access_token['access_token']))
